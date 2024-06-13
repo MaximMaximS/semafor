@@ -1,12 +1,14 @@
 use anyhow::Context;
 use axum::{
+    extract::State,
     http::StatusCode,
     response::{IntoResponse, Response},
     routing::get,
     Router,
 };
+use bakalari::BakaWrapper;
 use rezvrh_scraper::Bakalari;
-use std::env::var;
+use std::{env::var, sync::Arc};
 
 mod bakalari;
 
@@ -29,6 +31,10 @@ where
     fn from(err: E) -> Self {
         Self(err.into())
     }
+}
+async fn get_light(State(baka): State<Arc<BakaWrapper>>) -> Result<String, AppError> {
+    let state = baka.get_state().await?;
+    Ok(format!("1{:0>3}", state.light()))
 }
 
 #[tokio::main]
@@ -79,11 +85,12 @@ async fn main() -> anyhow::Result<()> {
         before_break,
         before_lesson,
     };
-    let bakalari = bakalari::BakaWrapper::new(bakalari, &room, options).context("Invalid room")?;
-    let state = bakalari.get_state().await?;
-    println!("{state:?}");
+    let bakalari =
+        Arc::new(bakalari::BakaWrapper::new(bakalari, &room, options).context("Invalid room")?);
 
-    let app = Router::new().route("/", get(|| async { "Hello, World!" }));
+    let app = Router::new()
+        .route("/config", get(get_light))
+        .with_state(bakalari);
 
     // run our app with hyper, listening globally on port 3000
     let listener = tokio::net::TcpListener::bind(format!("{address}:{port}")).await?;

@@ -25,11 +25,23 @@ pub struct BakaWrapper {
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum State {
-    Lesson,
-    BeforeLesson,
-    Break,
-    BeforeBreak,
     Empty,
+    Break,
+    BeforeLesson,
+    Lesson,
+    BeforeBreak,
+}
+
+impl State {
+    pub const fn light(self) -> u8 {
+        match self {
+            Self::Empty => 0b000,
+            Self::Break => 0b100,
+            Self::BeforeLesson => 0b010,
+            Self::Lesson => 0b001,
+            Self::BeforeBreak => 0b011,
+        }
+    }
 }
 
 impl BakaWrapper {
