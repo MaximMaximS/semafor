@@ -102,8 +102,9 @@ impl BakaWrapper {
         let Some(first) = first else {
             return Ok(State::Empty);
         };
-        let lights_on = first.0.start - Duration::seconds(i64::from(self.options.lights_on));
-        if time_now < lights_on {
+        let tz_start = date.with_time(first.0.start).unwrap();
+        let lights_on = tz_start - Duration::seconds(i64::from(self.options.lights_on));
+        if date < lights_on {
             return Ok(State::Empty);
         }
         while let Some((hour, _)) = lessons.next() {
