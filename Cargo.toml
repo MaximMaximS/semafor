@@ -1,0 +1,13 @@
+[package]
+name = "semafor"
+authors = ["MaximMaximS"]
+version = "0.1.0"
+edition = "2021"
+license = "MIT-0"
+
+[dependencies]
+anyhow = "1.0.86"
+axum = "0.7"
+rezvrh_scraper = "0.1.1"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+tracing-subscriber = "0.3.18"
