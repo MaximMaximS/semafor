@@ -34,7 +34,7 @@ where
 }
 async fn get_light(State(baka): State<Arc<BakaWrapper>>) -> Result<String, AppError> {
     let state = baka.get_state().await?;
-    Ok(format!("1{:03b}", state.light()))
+    Ok(format!("{}", state.light() | 0b1000))
 }
 
 #[tokio::main]
