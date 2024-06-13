@@ -1,0 +1,13 @@
+services:
+    semafor:
+        image: semafor
+        build: .
+        ports:
+            - "3000:3000"
+        environment:
+            - BAKA_ROOM=216
+            - BAKA_URL=https://gymberoun.bakalari.cz
+            - LIGHTS_ON=300000000
+            - LIGHTS_OFF=30
+            - BEFORE_BREAK=1
+            - BEFORE_LESSON=1
