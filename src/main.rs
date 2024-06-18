@@ -9,6 +9,7 @@ use axum::{
 use bakalari::BakaWrapper;
 use rezvrh_scraper::Bakalari;
 use std::{env::var, sync::Arc};
+use tokio::signal;
 use tracing::Level;
 use tracing_subscriber::{fmt::format::FmtSpan, FmtSubscriber};
 
@@ -101,5 +102,34 @@ async fn main() -> anyhow::Result<()> {
 
     // run our app with hyper, listening globally on port 3000
     let listener = tokio::net::TcpListener::bind(format!("{address}:{port}")).await?;
-    Ok(axum::serve(listener, app).await?)
+    Ok(axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
+        .await?)
+}
+
+#[allow(clippy::redundant_pub_crate)]
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        signal::unix::signal(signal::unix::SignalKind::terminate())
+            .expect("failed to install signal handler")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        () = ctrl_c => {},
+        () = terminate => {},
+    }
+
+    tracing::info!("Shutting down...");
 }
