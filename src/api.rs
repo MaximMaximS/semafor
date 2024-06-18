@@ -52,7 +52,6 @@ pub async fn api() -> anyhow::Result<()> {
         .route("/config", get(get_light))
         .with_state(bakalari);
 
-    // run our app with hyper, listening globally on port 3000
     let listener = tokio::net::TcpListener::bind(CONFIG.socket).await?;
     Ok(axum::serve(listener, app)
         .with_graceful_shutdown(shutdown_signal())
