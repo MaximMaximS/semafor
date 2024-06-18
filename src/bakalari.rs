@@ -2,6 +2,7 @@ use chrono::{DateTime, Duration};
 use chrono_tz::{Europe::Prague, Tz};
 use rezvrh_scraper::{Bakalari, Selector, Timetable, Type};
 use tokio::sync::Mutex;
+use tracing::debug;
 
 #[derive(Debug)]
 pub struct Options {
@@ -56,11 +57,13 @@ impl BakaWrapper {
         })
     }
 
+    #[tracing::instrument(skip(self))]
     pub async fn get_state(&self) -> anyhow::Result<State> {
         let now = chrono::Local::now().with_timezone(&Prague);
         self.get_state_at(now).await
     }
 
+    #[tracing::instrument(skip(self))]
     pub async fn get_state_at(&self, date: DateTime<Tz>) -> anyhow::Result<State> {
         let mut table_l = self.timetable.lock().await;
         if table_l.is_none() {
@@ -73,6 +76,7 @@ impl BakaWrapper {
 
         let table = table_l.as_ref().unwrap().clone();
         drop(table_l);
+        debug!(table = ?table, "Got timetable");
 
         let time_now = date.time();
         let date_now = date.date_naive();
@@ -99,12 +103,16 @@ impl BakaWrapper {
             })
             .peekable();
         let first = lessons.peek();
+        debug!(first = ?first, "First lesson");
         let Some(first) = first else {
+            debug!("No lessons");
             return Ok(State::Empty);
         };
         let tz_start = date.with_time(first.0.start).unwrap();
+        debug!(tz_start = ?tz_start, "First lesson start");
         let lights_on = tz_start - Duration::seconds(i64::from(self.options.lights_on));
         if date < lights_on {
+            debug!("Too early for lights on");
             return Ok(State::Empty);
         }
         while let Some((hour, _)) = lessons.next() {

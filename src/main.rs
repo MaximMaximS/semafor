@@ -9,6 +9,8 @@ use axum::{
 use bakalari::BakaWrapper;
 use rezvrh_scraper::Bakalari;
 use std::{env::var, sync::Arc};
+use tracing::Level;
+use tracing_subscriber::{fmt::format::FmtSpan, FmtSubscriber};
 
 mod bakalari;
 
@@ -39,7 +41,12 @@ async fn get_light(State(baka): State<Arc<BakaWrapper>>) -> Result<String, AppEr
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    tracing_subscriber::fmt::init();
+    let subscriber = FmtSubscriber::builder()
+        .with_max_level(Level::TRACE)
+        .with_span_events(FmtSpan::ENTER | FmtSpan::EXIT)
+        .finish();
+
+    tracing::subscriber::set_global_default(subscriber)?;
     // env
     let address = var("ADDRESS").unwrap_or_else(|_| "0.0.0.0".to_string());
     let port = var("PORT").unwrap_or_else(|_| "3000".to_string());
