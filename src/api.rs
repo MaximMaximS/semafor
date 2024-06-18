@@ -86,6 +86,7 @@ pub async fn api() -> anyhow::Result<()> {
         Arc::new(bakalari::BakaWrapper::new(bakalari, &room, options).context("Invalid room")?);
 
     let app = Router::new()
+        .route("/", get(|| async { "Hello, World!" }))
         .route("/config", get(get_light))
         .with_state(bakalari);
 
