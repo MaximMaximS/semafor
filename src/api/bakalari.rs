@@ -4,23 +4,12 @@ use rezvrh_scraper::{Bakalari, Selector, Timetable, Type};
 use tokio::sync::Mutex;
 use tracing::debug;
 
-#[derive(Debug)]
-pub struct Options {
-    /// Seconds
-    pub lights_on: u32,
-    /// Seconds
-    pub lights_off: u32,
-    /// Seconds
-    pub before_break: u32,
-    /// Seconds
-    pub before_lesson: u32,
-}
+use crate::CONFIG;
 
 #[derive(Debug)]
 pub struct BakaWrapper {
     bakalari: Bakalari,
     selector: Selector,
-    options: Options,
     timetable: Mutex<Option<Timetable>>,
 }
 
@@ -46,14 +35,13 @@ impl State {
 }
 
 impl BakaWrapper {
-    pub fn new(bakalari: Bakalari, room: &str, options: Options) -> Option<Self> {
-        let sel = bakalari.get_selector(Type::Room, room);
+    pub fn new(bakalari: Bakalari) -> Option<Self> {
+        let sel = bakalari.get_selector(Type::Room, &CONFIG.bakalari.room);
 
         Some(Self {
             bakalari,
             selector: sel?,
             timetable: Mutex::new(None),
-            options,
         })
     }
 
@@ -110,14 +98,14 @@ impl BakaWrapper {
         };
         let tz_start = date.with_time(first.0.start).unwrap();
         debug!(tz_start = ?tz_start, "First lesson start");
-        let lights_on = tz_start - Duration::seconds(i64::from(self.options.lights_on));
+        let lights_on = tz_start - CONFIG.time.lights_on;
         if date < lights_on {
             debug!("Too early for lights on");
             return Ok(State::Empty);
         }
         while let Some((hour, _)) = lessons.next() {
             let start = hour.start;
-            let early_start = start - Duration::seconds(i64::from(self.options.before_lesson));
+            let early_start = start - CONFIG.time.before_lesson;
 
             if time_now < early_start {
                 return Ok(State::Break);
@@ -128,7 +116,7 @@ impl BakaWrapper {
             }
 
             let end = hour.start + Duration::minutes(hour.duration.into());
-            let early_end = end - Duration::seconds(i64::from(self.options.before_break));
+            let early_end = end - CONFIG.time.before_break;
             if time_now < early_end {
                 return Ok(State::Lesson);
             }
@@ -141,7 +129,7 @@ impl BakaWrapper {
                 continue;
             }
 
-            let lights_off = end + Duration::seconds(i64::from(self.options.lights_off));
+            let lights_off = end + CONFIG.time.lights_off;
 
             if time_now < lights_off {
                 return Ok(State::Break);
@@ -150,40 +138,5 @@ impl BakaWrapper {
             return Ok(State::Empty);
         }
         unreachable!("lessons.next() should have returned None");
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use chrono::Timelike;
-
-    use super::*;
-
-    #[tokio::test]
-    async fn test_get_state() {
-        let baka = Bakalari::no_auth("https://gymberoun.bakalari.cz".parse().unwrap())
-            .await
-            .unwrap();
-        let wrapper = BakaWrapper::new(
-            baka,
-            "216",
-            Options {
-                lights_on: 30 * 60,
-                lights_off: 10 * 60,
-                before_break: 60,
-                before_lesson: 60,
-            },
-        )
-        .unwrap();
-
-        let mut date = chrono::Local::now()
-            .with_timezone(&Prague)
-            .with_hour(6)
-            .unwrap();
-        for _ in 0..1000 {
-            let state = wrapper.get_state_at(date).await.unwrap();
-            println!("{date:?} {state:?}");
-            date += Duration::minutes(1);
-        }
     }
 }
