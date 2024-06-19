@@ -1,17 +1,26 @@
-use tracing::Level;
-use tracing_subscriber::{fmt::format::FmtSpan, FmtSubscriber};
+use std::{ops::Deref, sync::OnceLock};
+
+use cli::Config;
 
 mod api;
-pub(crate) mod bakalari;
+mod cli;
+
+#[derive(Debug)]
+struct ConfigWrapper(OnceLock<Config>);
+
+static CONFIG: ConfigWrapper = ConfigWrapper(OnceLock::new());
+
+impl Deref for ConfigWrapper {
+    type Target = Config;
+    fn deref(&self) -> &Self::Target {
+        self.0.get().unwrap()
+    }
+}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let subscriber = FmtSubscriber::builder()
-        .with_max_level(Level::TRACE)
-        .with_span_events(FmtSpan::ENTER | FmtSpan::EXIT)
-        .finish();
-
-    tracing::subscriber::set_global_default(subscriber)?;
+    let config = cli::init()?;
+    CONFIG.0.set(config).unwrap();
 
     api::api().await?;
 
