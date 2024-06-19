@@ -51,7 +51,7 @@ struct Args {
     before_lesson: u32,
 
     /// Admin key
-    #[clap(long)]
+    #[clap(long, env)]
     key: String,
 }
 

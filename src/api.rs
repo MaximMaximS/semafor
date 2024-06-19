@@ -36,8 +36,8 @@ pub async fn api() -> anyhow::Result<()> {
     let app = Router::new()
         .route("/", get(|| async { "Hello, World!" }))
         .route("/config", get(get_light))
-        .route("/mode", post(set_mode))
-        .route("/light", post(set_light))
+        .route("/mode/:mode", post(set_mode))
+        .route("/light/:light", post(set_light))
         .with_state(state);
 
     let listener = tokio::net::TcpListener::bind(CONFIG.socket).await?;
