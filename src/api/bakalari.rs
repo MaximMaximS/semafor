@@ -1,4 +1,8 @@
-use super::util::AppError;
+use super::{
+    config::{Light, Mode},
+    util::AppError,
+    AppState,
+};
 use crate::CONFIG;
 use anyhow::Context;
 use axum::extract::State;
@@ -26,13 +30,13 @@ pub enum LightState {
 }
 
 impl LightState {
-    pub const fn light(self) -> u8 {
+    pub const fn light(self) -> Light {
         match self {
-            Self::Empty => 0b000,
-            Self::Break => 0b100,
-            Self::BeforeLesson => 0b010,
-            Self::Lesson => 0b001,
-            Self::BeforeBreak => 0b011,
+            Self::Empty => Light::Off,
+            Self::Break => Light::Green,
+            Self::BeforeLesson => Light::Amber,
+            Self::Lesson => Light::Red,
+            Self::BeforeBreak => Light::RedAmber,
         }
     }
 }
@@ -133,7 +137,14 @@ impl BakaWrapper {
     }
 }
 
-pub async fn get_light(State(baka): State<Arc<BakaWrapper>>) -> Result<String, AppError> {
-    let state = baka.get_state().await?;
-    Ok(format!("{}", state.light() | 0b1000))
+pub async fn get_light(State(state): State<Arc<AppState>>) -> Result<String, AppError> {
+    let config = state.config.lock().await;
+    let static_val = config.custom.to_val();
+    let mode = config.mode;
+    drop(config);
+    let light = match mode {
+        Mode::Static => static_val,
+        Mode::Bakalari => state.bakalari.get_state().await?.light().to_val(),
+    };
+    Ok(format!("{}", light | 0b1000))
 }

@@ -49,6 +49,10 @@ struct Args {
     /// Time before lesson
     #[clap(long, env, default_value = "60")]
     before_lesson: u32,
+
+    /// Admin key
+    #[clap(long)]
+    key: String,
 }
 
 #[derive(Debug)]
@@ -75,6 +79,7 @@ pub struct Config {
     pub socket: SocketAddr,
     pub bakalari: BakalariOptions,
     pub time: TimeOptions,
+    pub key: String,
 }
 
 impl TryFrom<Args> for Config {
@@ -107,6 +112,7 @@ impl TryFrom<Args> for Config {
                 before_break: Duration::seconds(i64::from(args.before_break)),
                 before_lesson: Duration::seconds(i64::from(args.before_lesson)),
             },
+            key: args.key,
         })
     }
 }
