@@ -9,6 +9,7 @@ use moder::{set_light, set_mode};
 use rezvrh_scraper::Bakalari;
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use tower_http::cors::CorsLayer;
 use util::shutdown_signal;
 
 mod bakalari;
@@ -38,7 +39,8 @@ pub async fn api() -> anyhow::Result<()> {
         .route("/config", get(get_light))
         .route("/mode/:mode", post(set_mode))
         .route("/light/:light", post(set_light))
-        .with_state(state);
+        .with_state(state)
+        .layer(CorsLayer::very_permissive());
 
     let listener = tokio::net::TcpListener::bind(CONFIG.socket).await?;
     tracing::info!("Starting...");
