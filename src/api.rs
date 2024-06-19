@@ -1,5 +1,4 @@
 use crate::CONFIG;
-use anyhow::Context;
 use axum::{routing::get, Router};
 use bakalari::get_light;
 use rezvrh_scraper::Bakalari;
@@ -16,7 +15,7 @@ pub async fn api() -> anyhow::Result<()> {
         Bakalari::no_auth(CONFIG.bakalari.url.clone()).await?
     };
 
-    let bakalari = Arc::new(bakalari::BakaWrapper::new(bakalari).context("Invalid room")?);
+    let bakalari = Arc::new(bakalari::BakaWrapper::new(bakalari).await?);
 
     let app = Router::new()
         .route("/", get(|| async { "Hello, World!" }))

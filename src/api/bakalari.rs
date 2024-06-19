@@ -1,21 +1,19 @@
-use std::sync::Arc;
-
+use super::util::AppError;
+use crate::CONFIG;
+use anyhow::Context;
 use axum::extract::State;
 use chrono::{DateTime, Duration};
 use chrono_tz::{Europe::Prague, Tz};
-use rezvrh_scraper::{Bakalari, Selector, Timetable, Type};
-use tokio::sync::Mutex;
+use rezvrh_scraper::{Bakalari, Type};
+use std::sync::Arc;
+use timetabler::Timetabler;
 use tracing::debug;
 
-use crate::CONFIG;
-
-use super::util::AppError;
+mod timetabler;
 
 #[derive(Debug)]
 pub struct BakaWrapper {
-    bakalari: Bakalari,
-    selector: Selector,
-    timetable: Mutex<Option<Timetable>>,
+    timetabler: Timetabler,
 }
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
@@ -40,13 +38,13 @@ impl LightState {
 }
 
 impl BakaWrapper {
-    pub fn new(bakalari: Bakalari) -> Option<Self> {
-        let sel = bakalari.get_selector(Type::Room, &CONFIG.bakalari.room);
+    pub async fn new(bakalari: Bakalari) -> anyhow::Result<Self> {
+        let sel = bakalari
+            .get_selector(Type::Room, &CONFIG.bakalari.room)
+            .context("room not found")?;
 
-        Some(Self {
-            bakalari,
-            selector: sel?,
-            timetable: Mutex::new(None),
+        Ok(Self {
+            timetabler: Timetabler::new(bakalari, sel).await?,
         })
     }
 
@@ -58,18 +56,7 @@ impl BakaWrapper {
 
     #[tracing::instrument(skip(self))]
     pub async fn get_state_at(&self, date: DateTime<Tz>) -> anyhow::Result<LightState> {
-        let mut table_l = self.timetable.lock().await;
-        if table_l.is_none() {
-            *table_l = Some(
-                self.bakalari
-                    .get_timetable(rezvrh_scraper::Which::Actual, &self.selector)
-                    .await?,
-            );
-        }
-
-        let table = table_l.as_ref().unwrap().clone();
-        drop(table_l);
-        debug!(table = ?table, "Got timetable");
+        let table = self.timetabler.get_timetable().await?;
 
         let time_now = date.time();
         let date_now = date.date_naive();
