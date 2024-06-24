@@ -1,5 +1,6 @@
-use super::config::Light;
-use crate::CONFIG;
+use crate::cli::TimeOptions;
+
+use super::state::Light;
 use anyhow::Context;
 use chrono::{DateTime, Duration};
 use chrono_tz::{Europe::Prague, Tz};
@@ -12,6 +13,7 @@ mod timetabler;
 #[derive(Debug)]
 pub struct BakaWrapper {
     timetabler: Timetabler,
+    options: TimeOptions,
 }
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
@@ -36,13 +38,14 @@ impl LightState {
 }
 
 impl BakaWrapper {
-    pub async fn new(bakalari: Bakalari) -> anyhow::Result<Self> {
+    pub async fn new(bakalari: Bakalari, room: &str, options: TimeOptions) -> anyhow::Result<Self> {
         let sel = bakalari
-            .get_selector(Type::Room, &CONFIG.bakalari.room)
+            .get_selector(Type::Room, room)
             .context("room not found")?;
 
         Ok(Self {
             timetabler: Timetabler::new(bakalari, sel).await?,
+            options,
         })
     }
 
@@ -88,14 +91,14 @@ impl BakaWrapper {
         };
         let tz_start = date.with_time(first.0.start).unwrap();
         debug!(tz_start = ?tz_start, "First lesson start");
-        let lights_on = tz_start - CONFIG.time.lights_on;
+        let lights_on = tz_start - self.options.lights_on;
         if date < lights_on {
             debug!("Too early for lights on");
             return Ok(LightState::Empty);
         }
         while let Some((hour, _)) = lessons.next() {
             let start = hour.start;
-            let early_start = start - CONFIG.time.before_lesson;
+            let early_start = start - self.options.before_lesson;
 
             if time_now < early_start {
                 return Ok(LightState::Break);
@@ -106,7 +109,7 @@ impl BakaWrapper {
             }
 
             let end = hour.start + Duration::minutes(hour.duration.into());
-            let early_end = end - CONFIG.time.before_break;
+            let early_end = end - self.options.before_break;
             if time_now < early_end {
                 return Ok(LightState::Lesson);
             }
@@ -119,7 +122,7 @@ impl BakaWrapper {
                 continue;
             }
 
-            let lights_off = end + CONFIG.time.lights_off;
+            let lights_off = end + self.options.lights_off;
 
             if time_now < lights_off {
                 return Ok(LightState::Break);

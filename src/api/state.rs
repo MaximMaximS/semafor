@@ -36,7 +36,7 @@ impl Light {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash, Default)]
-pub struct Config {
+pub struct State {
     pub mode: Mode,
     pub custom: Light,
 }
