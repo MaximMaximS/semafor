@@ -1,4 +1,4 @@
-use crate::cli::Config;
+use crate::args::Config;
 use axum::{
     routing::{get, post},
     Router,

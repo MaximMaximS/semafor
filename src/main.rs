@@ -1,9 +1,9 @@
 mod api;
-mod cli;
+mod args;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let config = cli::init()?;
+    let config = args::init()?;
 
     api::api(config).await?;
 

@@ -1,5 +1,4 @@
-use crate::cli::TimeOptions;
-
+use crate::args::TimeOptions;
 use super::state::Light;
 use anyhow::Context;
 use chrono::{DateTime, Duration};
