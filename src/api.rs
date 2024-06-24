@@ -3,8 +3,9 @@ use axum::{
     routing::{get, post},
     Router,
 };
-use bakalari::{get_light, BakaWrapper};
+use bakalari::BakaWrapper;
 use config::Config;
+use display::get_live;
 use moder::{set_light, set_mode};
 use rezvrh_scraper::Bakalari;
 use std::sync::Arc;
@@ -14,6 +15,7 @@ use util::shutdown_signal;
 
 mod bakalari;
 mod config;
+mod display;
 mod moder;
 mod util;
 
@@ -36,7 +38,7 @@ pub async fn api() -> anyhow::Result<()> {
 
     let app = Router::new()
         .route("/", get(|| async { "Hello, World!" }))
-        .route("/config", get(get_light))
+        .route("/config", get(get_live))
         .route("/mode/:mode", post(set_mode))
         .route("/light/:light", post(set_light))
         .with_state(state)

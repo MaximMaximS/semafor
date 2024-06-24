@@ -1,15 +1,9 @@
-use super::{
-    config::{Light, Mode},
-    util::AppError,
-    AppState,
-};
+use super::config::Light;
 use crate::CONFIG;
 use anyhow::Context;
-use axum::extract::State;
 use chrono::{DateTime, Duration};
 use chrono_tz::{Europe::Prague, Tz};
 use rezvrh_scraper::{Bakalari, Type};
-use std::sync::Arc;
 use timetabler::Timetabler;
 use tracing::debug;
 
@@ -135,16 +129,4 @@ impl BakaWrapper {
         }
         unreachable!("lessons.next() should have returned None");
     }
-}
-
-pub async fn get_light(State(state): State<Arc<AppState>>) -> Result<String, AppError> {
-    let config = state.config.lock().await;
-    let static_val = config.custom.to_val();
-    let mode = config.mode;
-    drop(config);
-    let light = match mode {
-        Mode::Static => static_val,
-        Mode::Bakalari => state.bakalari.get_state().await?.light().to_val(),
-    };
-    Ok(format!("{}", light | 0b1000))
 }
