@@ -1,7 +1,7 @@
 [package]
 name = "semafor"
 authors = ["MaximMaximS"]
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 license = "MIT-0"
 description = "Semafor controller"
@@ -15,7 +15,7 @@ axum = "0.7"
 axum-auth = "0.7.0"
 base64 = "0.22"
 chrono = "0.4"
-chrono-tz = "0.9"
+chrono-tz = "0.10"
 clap = { version = "4.5", features = ["derive", "env"] }
 derive_more = "1.0"
 rezvrh_scraper = "0.1"
