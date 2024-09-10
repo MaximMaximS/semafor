@@ -1,5 +1,5 @@
-use crate::args::TimeOptions;
 use super::state::Light;
+use crate::args::TimeOptions;
 use anyhow::Context;
 use chrono::{DateTime, Duration};
 use chrono_tz::{Europe::Prague, Tz};
@@ -66,7 +66,7 @@ impl BakaWrapper {
             return Ok(LightState::Empty);
         };
         let hours = &table.hours;
-        assert!(hours.len() == day.lessons.len());
+        assert!(hours.len() == day.lessons.len(), "hour mismatch");
         let mut lessons = hours
             .iter()
             .zip(day.lessons.iter())

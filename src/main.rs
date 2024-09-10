@@ -1,3 +1,5 @@
+//! Semafor controllerpi
+
 mod api;
 mod args;
 
