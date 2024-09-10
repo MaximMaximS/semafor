@@ -50,6 +50,10 @@ struct Args {
     #[clap(long, env, default_value = "60")]
     before_lesson: u32,
 
+    /// Banned teachers
+    #[clap(long, env, value_delimiter = ',')]
+    ban: Option<Vec<String>>,
+
     /// Admin key
     #[clap(long, env)]
     key: String,
@@ -65,6 +69,8 @@ pub struct TimeOptions {
     pub before_break: Duration,
     /// Seconds
     pub before_lesson: Duration,
+    /// Banned teachers
+    pub ban: Option<Vec<String>>,
 }
 
 #[derive(Debug)]
@@ -111,6 +117,9 @@ impl TryFrom<Args> for Config {
                 lights_off: Duration::seconds(i64::from(args.lights_off)),
                 before_break: Duration::seconds(i64::from(args.before_break)),
                 before_lesson: Duration::seconds(i64::from(args.before_lesson)),
+                ban: args
+                    .ban
+                    .map(|b| b.into_iter().map(|b| b.to_lowercase()).collect()),
             },
             key: args.key,
         })

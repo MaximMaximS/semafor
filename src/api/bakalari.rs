@@ -70,32 +70,32 @@ impl BakaWrapper {
         let mut lessons = hours
             .iter()
             .zip(day.lessons.iter())
-            .filter(|(_, l)| {
+            .filter_map(|(h, l)| {
                 if l.is_empty() {
-                    return false;
+                    return None;
                 }
                 let l = &l[0];
-                matches!(
-                    l,
-                    rezvrh_scraper::Lesson::Regular { .. }
-                        | rezvrh_scraper::Lesson::Substitution { .. }
-                )
+                let teacher = match l {
+                    rezvrh_scraper::Lesson::Substitution { teacher, .. }
+                    | rezvrh_scraper::Lesson::Regular { teacher, .. } => Some(teacher),
+                    _ => None,
+                };
+
+                teacher.map(|t| (h, t))
             })
             .peekable();
         let first = lessons.peek();
-        debug!(first = ?first, "First lesson");
         let Some(first) = first else {
             debug!("No lessons");
             return Ok(LightState::Empty);
         };
         let tz_start = date.with_time(first.0.start).unwrap();
-        debug!(tz_start = ?tz_start, "First lesson start");
         let lights_on = tz_start - self.options.lights_on;
         if date < lights_on {
             debug!("Too early for lights on");
             return Ok(LightState::Empty);
         }
-        while let Some((hour, _)) = lessons.next() {
+        while let Some((hour, teacher)) = lessons.next() {
             let start = hour.start;
             let early_start = start - self.options.before_lesson;
 
@@ -109,11 +109,22 @@ impl BakaWrapper {
 
             let end = hour.start + Duration::minutes(hour.duration.into());
             let early_end = end - self.options.before_break;
-            if time_now < early_end {
-                return Ok(LightState::Lesson);
-            }
 
             if time_now < end {
+                let banned = self
+                    .options
+                    .ban
+                    .as_ref()
+                    .is_some_and(|ban| ban.iter().any(|b| teacher.to_lowercase().contains(b)));
+
+                if banned {
+                    return Ok(LightState::Empty);
+                }
+
+                if time_now < early_end {
+                    return Ok(LightState::Lesson);
+                }
+
                 return Ok(LightState::BeforeBreak);
             }
 
