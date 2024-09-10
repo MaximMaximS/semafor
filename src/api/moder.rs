@@ -1,9 +1,8 @@
 use super::{
-    config::{Light, Mode},
+    state::{Light, Mode},
     util::AppError,
     AppState,
 };
-use crate::CONFIG;
 use axum::{
     extract::{Path, State},
     http::StatusCode,
@@ -16,11 +15,11 @@ pub async fn set_mode(
     AuthBearer(token): AuthBearer,
     State(state): State<Arc<AppState>>,
 ) -> Result<StatusCode, AppError> {
-    if token != CONFIG.key {
+    if token != state.key {
         return Ok(StatusCode::UNAUTHORIZED);
     }
 
-    state.config.lock().await.mode = mode;
+    state.state.lock().await.mode = mode;
 
     Ok(StatusCode::OK)
 }
@@ -30,11 +29,11 @@ pub async fn set_light(
     AuthBearer(token): AuthBearer,
     State(state): State<Arc<AppState>>,
 ) -> Result<StatusCode, AppError> {
-    if token != CONFIG.key {
+    if token != state.key {
         return Ok(StatusCode::UNAUTHORIZED);
     }
 
-    state.config.lock().await.custom = light;
+    state.state.lock().await.custom = light;
 
     Ok(StatusCode::OK)
 }

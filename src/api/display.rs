@@ -1,9 +1,9 @@
-use super::{config::Mode, util::AppError, AppState};
+use super::{state::Mode, util::AppError, AppState};
 use axum::extract::State;
 use std::sync::Arc;
 
 pub async fn get_live(State(state): State<Arc<AppState>>) -> Result<String, AppError> {
-    let config = state.config.lock().await;
+    let config = state.state.lock().await;
     let static_val = config.custom.to_val();
     let mode = config.mode;
     drop(config);

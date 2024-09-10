@@ -1,28 +1,13 @@
-use std::{ops::Deref, sync::OnceLock};
-
-use cli::Config;
+//! Semafor controllerpi
 
 mod api;
-mod cli;
-
-#[derive(Debug)]
-struct ConfigWrapper(OnceLock<Config>);
-
-static CONFIG: ConfigWrapper = ConfigWrapper(OnceLock::new());
-
-impl Deref for ConfigWrapper {
-    type Target = Config;
-    fn deref(&self) -> &Self::Target {
-        self.0.get().unwrap()
-    }
-}
+mod args;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let config = cli::init()?;
-    CONFIG.0.set(config).unwrap();
+    let config = args::init()?;
 
-    api::api().await?;
+    api::api(config).await?;
 
     Ok(())
 }

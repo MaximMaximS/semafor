@@ -1,40 +1,47 @@
-use crate::CONFIG;
+use crate::args::Config;
 use axum::{
     routing::{get, post},
     Router,
 };
 use bakalari::BakaWrapper;
-use config::Config;
 use display::get_live;
 use moder::{set_light, set_mode};
 use rezvrh_scraper::Bakalari;
+use state::State;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tower_http::cors::CorsLayer;
 use util::shutdown_signal;
 
 mod bakalari;
-mod config;
 mod display;
 mod moder;
+mod state;
 mod util;
 
 struct AppState {
     bakalari: BakaWrapper,
-    config: Mutex<Config>,
+    state: Mutex<State>,
+    key: String,
 }
 
-pub async fn api() -> anyhow::Result<()> {
-    let bakalari = if let Some(creds) = CONFIG.bakalari.auth.clone() {
-        Bakalari::from_creds(creds, CONFIG.bakalari.url.clone()).await?
+pub async fn api(config: Config) -> anyhow::Result<()> {
+    let bakalari = if let Some(creds) = config.bakalari.auth.clone() {
+        Bakalari::from_creds(creds, config.bakalari.url.clone()).await?
     } else {
-        Bakalari::no_auth(CONFIG.bakalari.url.clone()).await?
+        Bakalari::no_auth(config.bakalari.url.clone()).await?
     };
 
-    let bakalari = bakalari::BakaWrapper::new(bakalari).await?;
-    let config = Mutex::new(Config::default());
+    let bakalari = bakalari::BakaWrapper::new(bakalari, &config.bakalari.room, config.time).await?;
+    let state = Mutex::new(State::default());
 
-    let state = Arc::new(AppState { bakalari, config });
+    let socket = config.socket;
+
+    let state = Arc::new(AppState {
+        bakalari,
+        state,
+        key: config.key,
+    });
 
     let app = Router::new()
         .route("/", get(|| async { "Hello, World!" }))
@@ -44,7 +51,7 @@ pub async fn api() -> anyhow::Result<()> {
         .with_state(state)
         .layer(CorsLayer::very_permissive());
 
-    let listener = tokio::net::TcpListener::bind(CONFIG.socket).await?;
+    let listener = tokio::net::TcpListener::bind(socket).await?;
     tracing::info!("Starting...");
     Ok(axum::serve(listener, app)
         .with_graceful_shutdown(shutdown_signal())
