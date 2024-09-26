@@ -111,6 +111,8 @@ impl BakaWrapper {
             let early_end = end - self.options.before_break;
 
             if time_now < end {
+                println!("ban: {:?}", self.options.ban);
+                println!("teacher: {teacher:?}");
                 let banned = self
                     .options
                     .ban
