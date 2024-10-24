@@ -1,21 +1,20 @@
-FROM rust:1 AS chef 
+FROM clux/muslrust:stable AS chef
 RUN cargo install cargo-chef 
-WORKDIR /semafor
+WORKDIR /app
 
 FROM chef AS planner
 COPY . .
 RUN cargo chef prepare --recipe-path recipe.json
 
 FROM chef AS builder 
-COPY --from=planner /semafor/recipe.json recipe.json
-RUN cargo chef cook --release --recipe-path recipe.json
+COPY --from=planner /app/recipe.json recipe.json
+RUN cargo chef cook --release --target x86_64-unknown-linux-musl --recipe-path recipe.json
 COPY . .
-RUN cargo build --release --bin semafor
+RUN cargo build --release --target x86_64-unknown-linux-musl --bin semafor
 
-# We do not need the Rust toolchain to run the binary!
-FROM debian:bookworm-slim AS runtime
-WORKDIR /semafor
-# hadolint ignore=DL3008
-RUN apt-get update && apt-get install --no-install-recommends -y libssl3 ca-certificates && rm -rf /var/lib/apt/lists/*
-COPY --from=builder /semafor/target/release/semafor /usr/local/bin
-ENTRYPOINT ["/usr/local/bin/semafor"]
+# hadolint ignore=DL3007
+FROM alpine:latest AS runtime
+RUN addgroup -S myuser && adduser -S myuser -G myuser
+COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/semafor /usr/local/bin/
+USER myuser
+CMD ["/usr/local/bin/semafor"]
